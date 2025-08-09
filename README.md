@@ -98,29 +98,29 @@ The same test files work in both modes - the system automatically detects the en
 
 ```bash
 # Run isolated tests (fast, no dependencies)
-python run_tests_isolated.py
+python scripts/run_tests_isolated.py
 
 # Run specific test categories
-python run_tests_isolated.py --auth      # Authentication tests only
-python run_tests_isolated.py --authors   # Author tests only
-python run_tests_isolated.py --books     # Book tests only
-python run_tests_isolated.py --coverage  # With coverage report
-python run_tests_isolated.py --fast      # Skip slow tests
+python scripts/run_tests_isolated.py --auth      # Authentication tests only
+python scripts/run_tests_isolated.py --authors   # Author tests only
+python scripts/run_tests_isolated.py --books     # Book tests only
+python scripts/run_tests_isolated.py --coverage  # With coverage report
+python scripts/run_tests_isolated.py --fast      # Skip slow tests
 ```
 
 # Run specific test categories
 
-python run_tests_isolated.py --auth
-python run_tests_isolated.py --authors
-python run_tests_isolated.py --books
+python scripts/run_tests_isolated.py --auth
+python scripts/run_tests_isolated.py --authors
+python scripts/run_tests_isolated.py --books
 
 # Run with coverage
 
-python run_tests_isolated.py --coverage
+python scripts/run_tests_isolated.py --coverage
 
 # Quick tests (stop on first failure)
 
-python run_tests_isolated.py --fast
+python scripts/run_tests_isolated.py --fast
 
 ````
 
@@ -138,14 +138,14 @@ python run_tests_isolated.py --fast
 
 ```bash
 # Run integration tests (automatically starts Docker Compose)
-python run_tests_integration.py
+python scripts/run_tests_integration.py
 
 # Run specific test categories
-python run_tests_integration.py --auth      # Authentication tests only
-python run_tests_integration.py --authors   # Author tests only
-python run_tests_integration.py --books     # Book tests only
-python run_tests_integration.py --coverage  # With coverage report
-python run_tests_integration.py --fast      # Skip slow tests
+python scripts/run_tests_integration.py --auth      # Authentication tests only
+python scripts/run_tests_integration.py --authors   # Author tests only
+python scripts/run_tests_integration.py --books     # Book tests only
+python scripts/run_tests_integration.py --coverage  # With coverage report
+python scripts/run_tests_integration.py --fast      # Skip slow tests
 ````
 
 **⚠️ Requires:**
@@ -162,63 +162,63 @@ python run_tests_integration.py --fast      # Skip slow tests
 
 ```bash
 # Run all tests
-run_tests.bat
+scripts/run_tests.bat
 
 # Run specific test categories
-run_tests.bat auth
-run_tests.bat authors
-run_tests.bat books
+scripts/run_tests.bat auth
+scripts/run_tests.bat authors
+scripts/run_tests.bat books
 
 # Run with coverage
-run_tests.bat coverage
+scripts/run_tests.bat coverage
 
 # Performance tests
-run_tests.bat performance
+scripts/run_tests.bat performance
 
 # Load tests
-run_tests.bat load
+scripts/run_tests.bat load
 
 # Quick tests (stop on first failure)
-run_tests.bat fast
+scripts/run_tests.bat fast
 
 # Debug mode
-run_tests.bat debug
+scripts/run_tests.bat debug
 
 # Show help
-run_tests.bat help
+scripts/run_tests.bat help
 ```
 
 **Linux/Mac:**
 
 ```bash
 # Make script executable (first time only)
-chmod +x run_tests.sh
+chmod +x scripts/run_tests.sh
 
 # Run all tests
-./run_tests.sh
+./scripts/run_tests.sh
 
 # Run specific test categories
-./run_tests.sh auth
-./run_tests.sh authors
-./run_tests.sh books
+./scripts/run_tests.sh auth
+./scripts/run_tests.sh authors
+./scripts/run_tests.sh books
 
 # Run with coverage
-./run_tests.sh coverage
+./scripts/run_tests.sh coverage
 
 # Performance tests
-./run_tests.sh performance
+./scripts/run_tests.sh performance
 
 # Load tests
-./run_tests.sh load
+./scripts/run_tests.sh load
 
 # Quick tests (stop on first failure)
-./run_tests.sh fast
+./scripts/run_tests.sh fast
 
 # Debug mode
-./run_tests.sh debug
+./scripts/run_tests.sh debug
 
 # Show help
-./run_tests.sh help
+./scripts/run_tests.sh help
 ```
 
 #### Direct Commands
@@ -272,10 +272,10 @@ The project includes comprehensive load testing capabilities using Locust:
 
 ```bash
 # Linux/Mac
-./run_load_test.sh quick
+./scripts/run_load_test.sh quick
 
 # Windows
-run_load_test.bat quick
+scripts/run_load_test.bat quick
 ```
 
 **Available Load Test Options:**
@@ -522,14 +522,12 @@ docker-compose down -v
 
 ## 🚀 Production Deployment
 
-### Security Checklist
-
-- [ ] Set production SECRET_KEY
-- [ ] Configure CORS_ORIGINS for production domains
-- [ ] Set DEBUG=False
-- [ ] Configure database connection pooling
-- [ ] Set up monitoring and logging
-- [ ] Configure rate limiting for production
+- Set production SECRET_KEY
+- Configure CORS_ORIGINS for production domains
+- Set DEBUG=False
+- Configure database connection pooling
+- Set up monitoring and logging
+- Configure rate limiting for production
 
 ### Environment Variables for Production
 

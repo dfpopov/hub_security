@@ -1,6 +1,19 @@
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, List, Generic, TypeVar
 from datetime import datetime
+
+T = TypeVar('T')
+
+
+class PaginatedResponse(BaseModel, Generic[T]):
+    """Generic paginated response schema."""
+    items: List[T]
+    total: int
+    page: int
+    size: int
+    pages: int
+    has_next: bool
+    has_prev: bool
 
 
 class BookBase(BaseModel):

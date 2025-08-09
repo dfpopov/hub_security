@@ -1,11 +1,12 @@
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Query, Request
 from sqlalchemy.orm import Session
 from app.db.base import get_db
 from app.api.deps import get_current_user
 from app.models.user import User
 from app.services.book_service import BookService
-from app.schemas.book import Book, BookCreate, BookUpdate
+from app.schemas.book import Book, BookCreate, BookUpdate, PaginatedResponse
+from app.core.rate_limiter import limiter, get_user_rate_limit_key
 
 router = APIRouter()
 
@@ -14,20 +15,23 @@ def get_book_service(db: Session = Depends(get_db)) -> BookService:
     """Dependency to get book service."""
     return BookService(db)
 
-@router.get("/", response_model=List[Book])
+@router.get("/", response_model=PaginatedResponse[Book])
+@limiter.limit("30/minute", key_func=get_user_rate_limit_key)
 def read_books(
-    skip: int = Query(0, ge=0),
-    limit: int = Query(100, ge=1, le=100),
-    author_id: Optional[int] = Query(None),
-    genre: Optional[str] = Query(None),
-    publication_year: Optional[int] = Query(None),
+    request: Request,
+    skip: int = Query(0, ge=0, description="Number of items to skip"),
+    limit: int = Query(100, ge=1, le=100, description="Number of items to return"),
+    author_id: Optional[int] = Query(None, description="Filter by author ID"),
+    genre: Optional[str] = Query(None, description="Filter by genre"),
+    publication_year: Optional[int] = Query(None, description="Filter by publication year"),
     current_user: User = Depends(get_current_user),
     book_service: BookService = Depends(get_book_service)
 ):
-    """Get all books for the current user with optional filtering."""
-    # Use the original CRUD function for filtering
-    from app.crud.book import get_books
-    return get_books(
+    """Get all books for the current user with optional filtering and pagination."""
+    from app.crud.book import get_books_with_pagination
+    
+    # Get books with pagination
+    books, total = get_books_with_pagination(
         book_service.db, 
         user_id=current_user.id, 
         skip=skip, 
@@ -35,6 +39,22 @@ def read_books(
         author_id=author_id,
         genre=genre,
         publication_year=publication_year
+    )
+    
+    # Calculate pagination metadata
+    page = (skip // limit) + 1
+    pages = (total + limit - 1) // limit
+    has_next = skip + limit < total
+    has_prev = skip > 0
+    
+    return PaginatedResponse(
+        items=books,
+        total=total,
+        page=page,
+        size=len(books),
+        pages=pages,
+        has_next=has_next,
+        has_prev=has_prev
     )
 
 

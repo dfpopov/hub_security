@@ -2,13 +2,14 @@ from datetime import timedelta
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
+from app.crud.user import get_user_by_email
 from app.db.base import get_db
 from app.core.security import create_access_token, create_refresh_token, verify_refresh_token
 from app.core.config import settings
 from app.services.user_service import UserService
 from app.api.deps import get_current_user
 from app.schemas.user import UserCreate, User, Token, UserRegisterResponse
-from app.core.rate_limiter import limiter
+from app.core.rate_limiter import limiter, get_user_rate_limit_key
 
 router = APIRouter()
 
@@ -18,7 +19,7 @@ def get_user_service(db: Session = Depends(get_db)) -> UserService:
     return UserService(db)
 
 @router.post("/register", response_model=UserRegisterResponse)
-@limiter.limit("5/minute")
+@limiter.limit("5/minute", key_func=get_user_rate_limit_key)
 def register(
     user: UserCreate, 
     request: Request,
@@ -53,7 +54,7 @@ def register(
 
 
 @router.post("/login", response_model=Token)
-@limiter.limit("10/minute")
+@limiter.limit("10/minute", key_func=get_user_rate_limit_key)
 def login(
     request: Request,
     form_data: OAuth2PasswordRequestForm = Depends(), 

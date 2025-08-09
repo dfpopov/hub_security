@@ -71,7 +71,17 @@ class TestPerformance:
         execution_time = end_time - start_time
         
         assert response.status_code == 200
-        assert len(response.json()) == 50
+        data = response.json()
+        
+        # Handle both old (list) and new (paginated) response formats
+        if isinstance(data, list):
+            # Old format - direct list
+            assert len(data) == 50
+        else:
+            # New format - paginated response
+            assert "items" in data
+            assert len(data["items"]) == 50
+            assert data["total"] == 50
         
         # Performance assertion: should complete within 1 second
         assert execution_time < 1.0, f"Books list took {execution_time:.3f}s, expected < 1.0s"
@@ -104,7 +114,17 @@ class TestPerformance:
         execution_time = end_time - start_time
         
         assert response.status_code == 200
-        assert len(response.json()) == 10
+        data = response.json()
+        
+        # Handle both old (list) and new (paginated) response formats
+        if isinstance(data, list):
+            # Old format - direct list
+            assert len(data) == 10
+        else:
+            # New format - paginated response
+            assert "items" in data
+            assert len(data["items"]) == 10
+            assert data["total"] == 10
         
         # Performance assertion: should complete within 0.5 seconds
         assert execution_time < 0.5, f"Authors list took {execution_time:.3f}s, expected < 0.5s"

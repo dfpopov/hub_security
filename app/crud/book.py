@@ -1,7 +1,9 @@
 from sqlalchemy.orm import Session, joinedload
+from sqlalchemy import func
 from app.models.book import Book
 from app.schemas.book import BookCreate, BookUpdate
 from app.crud.author import get_author
+from typing import Tuple, List
 
 
 def get_book(db: Session, book_id: int, user_id: int) -> Book:
@@ -11,7 +13,7 @@ def get_book(db: Session, book_id: int, user_id: int) -> Book:
 
 def get_books(db: Session, user_id: int, skip: int = 0, limit: int = 100, 
               author_id: int = None, genre: str = None, publication_year: int = None,
-              include_author: bool = True):
+              include_author: bool = True) -> List[Book]:
     """Get all books for a specific user with optional filtering."""
     query = db.query(Book).filter(Book.user_id == user_id)
     
@@ -27,6 +29,33 @@ def get_books(db: Session, user_id: int, skip: int = 0, limit: int = 100,
         query = query.filter(Book.publication_year == publication_year)
     
     return query.offset(skip).limit(limit).all()
+
+
+def get_books_with_pagination(db: Session, user_id: int, skip: int = 0, limit: int = 100,
+                             author_id: int = None, genre: str = None, publication_year: int = None,
+                             include_author: bool = True) -> Tuple[List[Book], int]:
+    """Get books with pagination and return total count."""
+    # Build base query
+    query = db.query(Book).filter(Book.user_id == user_id)
+    
+    # Apply filters
+    if author_id:
+        query = query.filter(Book.author_id == author_id)
+    if genre:
+        query = query.filter(Book.genre == genre)
+    if publication_year:
+        query = query.filter(Book.publication_year == publication_year)
+    
+    # Get total count
+    total = query.count()
+    
+    # Apply eager loading and pagination
+    if include_author:
+        query = query.options(joinedload(Book.author))
+    
+    books = query.offset(skip).limit(limit).all()
+    
+    return books, total
 
 
 def create_book(db: Session, book: BookCreate, user_id: int) -> Book:
