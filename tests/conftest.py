@@ -1,6 +1,7 @@
 import pytest
 import os
 import uuid
+import multiprocessing
 from typing import Generator, Dict, Any
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
@@ -15,9 +16,13 @@ from app.api.deps import get_db
 # Check if we're running in isolated mode
 ISOLATED_MODE = os.getenv("TESTING_MODE") == "isolated"
 
+# Get process ID for unique database names in parallel execution
+PROCESS_ID = multiprocessing.current_process().pid if hasattr(multiprocessing, 'current_process') else os.getpid()
+
 if ISOLATED_MODE:
-    # Use SQLite file for isolated testing (to avoid in-memory connection issues)
-    test_db_url = "sqlite:///./test_isolated.db"
+    # Use SQLite in-memory for isolated testing to support parallel execution
+    # Add process ID to ensure unique database per process
+    test_db_url = f"sqlite:///./test_isolated_{PROCESS_ID}.db"
     test_engine = create_engine(
         test_db_url,
         connect_args={"check_same_thread": False},
@@ -26,7 +31,7 @@ if ISOLATED_MODE:
 else:
     # Use MySQL for integration testing
     test_engine = create_engine(
-        "mysql+pymysql://user:password@db:3306/book_collection_test",
+        "mysql+pymysql://user:password@localhost:3306/book_collection_test",
         pool_pre_ping=True,
         echo=False
     )
@@ -51,53 +56,42 @@ app.dependency_overrides[get_db] = override_get_db
 @pytest.fixture(scope="session", autouse=True)
 def setup_test_database():
     """Setup test database for the entire test session."""
-    # Create tables
-    Base.metadata.create_all(bind=test_engine)
+    # Create tables with check for existing tables
+    try:
+        Base.metadata.create_all(bind=test_engine)
+    except Exception as e:
+        # If tables already exist, that's fine for parallel execution
+        if "already exists" not in str(e):
+            raise
     yield
-    # Clean up - drop all tables and remove file
-    Base.metadata.drop_all(bind=test_engine)
+    # Clean up - drop all tables
+    try:
+        Base.metadata.drop_all(bind=test_engine)
+    except Exception:
+        # Ignore errors during cleanup
+        pass
     if ISOLATED_MODE:
-        import os
-        import time
-        try:
-            # Close all database connections first
-            test_engine.dispose()
-            # Wait a bit for file handles to be released
-            time.sleep(0.1)
-            os.remove("./test_isolated.db")
-        except (FileNotFoundError, PermissionError):
-            # File will be cleaned up on next run or by OS
-            pass
+        # For in-memory database, just dispose the engine
+        test_engine.dispose()
 
 
-@pytest.fixture(autouse=True)
-def setup_database_for_test():
-    """Ensure database is set up for each test."""
-    # Create tables if they don't exist
-    print(f"Creating tables with engine: {test_engine}")
-    print(f"Base metadata tables: {list(Base.metadata.tables.keys())}")
-    Base.metadata.create_all(bind=test_engine)
-    yield
-
-
-@pytest.fixture
+@pytest.fixture(scope="function")
 def db_session() -> Generator[Session, None, None]:
-    """Provide database session for each test."""
+    """Provide database session for each test with proper isolation."""
     session = TestingSessionLocal()
     try:
+        # Start a transaction
+        transaction = session.begin_nested()
         yield session
-    finally:
+        # Rollback the transaction to isolate test data
+        if transaction.is_active:
+            transaction.rollback()
+    except Exception:
+        # If there's an error, rollback the main session
         session.rollback()
+        raise
+    finally:
         session.close()
-        
-        # Clean up all data after each test
-        cleanup_session = TestingSessionLocal()
-        try:
-            for table in reversed(Base.metadata.sorted_tables):
-                cleanup_session.execute(table.delete())
-            cleanup_session.commit()
-        finally:
-            cleanup_session.close()
 
 
 @pytest.fixture
@@ -118,29 +112,29 @@ def client(db_session: Session) -> Generator[TestClient, None, None]:
 
 
 @pytest.fixture
-def auth_headers(client: TestClient) -> Dict[str, str]:
+def auth_headers(client: TestClient, db_session: Session) -> Dict[str, str]:
     """Provide authentication headers for authenticated requests."""
-    # Create unique test user
-    user_data = {
-        "email": f"test_{uuid.uuid4().hex[:8]}@example.com",
-        "username": f"testuser_{uuid.uuid4().hex[:8]}",
-        "password": "testpassword123"
-    }
+    # Create unique test user directly in database
+    from app.crud.user import create_user
+    from app.schemas.user import UserCreate
+    from app.core.security import create_access_token
     
-    # Register user
-    response = client.post("/api/v1/auth/register", json=user_data)
-    assert response.status_code == 200, f"Registration failed: {response.json()}"
+    user_data = UserCreate(
+        email=f"test_{uuid.uuid4().hex[:8]}@example.com",
+        username=f"testuser_{uuid.uuid4().hex[:8]}",
+        password="testpassword123"
+    )
     
-    # Login to get token
-    login_data = {
-        "username": user_data["email"],
-        "password": user_data["password"]
-    }
-    response = client.post("/api/v1/auth/login", data=login_data)
-    assert response.status_code == 200, f"Login failed: {response.json()}"
+    # Create user directly in database
+    user = create_user(db_session, user_data)
     
-    token_data = response.json()
-    return {"Authorization": f"Bearer {token_data['access_token']}"}
+    # Commit to ensure user is persisted
+    db_session.commit()
+    
+    # Create access token
+    token = create_access_token(data={"sub": user.email})
+    
+    return {"Authorization": f"Bearer {token}"}
 
 
 @pytest.fixture

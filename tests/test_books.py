@@ -1,5 +1,6 @@
 import os
 import pytest
+import uuid
 from fastapi.testclient import TestClient
 from tests.conftest import generate_book_data, generate_author_data
 
@@ -297,13 +298,13 @@ class TestBooks:
         """Test that books are isolated per user."""
         # Create two different users
         user1_data = {
-            "email": "user1@example.com",
-            "username": "user1",
+            "email": f"user1_{uuid.uuid4().hex[:8]}@example.com",
+            "username": f"user1_{uuid.uuid4().hex[:8]}",
             "password": "password123"
         }
         user2_data = {
-            "email": "user2@example.com",
-            "username": "user2",
+            "email": f"user2_{uuid.uuid4().hex[:8]}@example.com",
+            "username": f"user2_{uuid.uuid4().hex[:8]}",
             "password": "password123"
         }
         

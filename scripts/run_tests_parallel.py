@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 """
-Script to run tests in isolated mode (without Docker).
-This script sets up the environment for isolated testing and runs pytest.
+Script to run tests in parallel mode.
+This script sets up the environment for parallel testing and runs pytest with xdist.
 """
 
 import sys
 import subprocess
 import argparse
 import os
+import multiprocessing
 from pathlib import Path
 
 
@@ -30,7 +31,7 @@ def run_command(cmd, description, env=None):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Run tests in isolated mode")
+    parser = argparse.ArgumentParser(description="Run tests in parallel mode")
     parser.add_argument("--all", action="store_true", help="Run all tests")
     parser.add_argument("--auth", action="store_true", help="Run authentication tests")
     parser.add_argument("--authors", action="store_true", help="Run author tests")
@@ -39,13 +40,13 @@ def main():
     parser.add_argument("--fast", action="store_true", help="Run fast tests only")
     parser.add_argument("--debug", action="store_true", help="Enable debug output")
     parser.add_argument("--show-help", action="store_true", help="Show pytest help")
-    parser.add_argument("--parallel", action="store_true", help="Run tests in parallel")
     parser.add_argument("--workers", type=int, default=0, help="Number of worker processes (0 = auto)")
+    parser.add_argument("--config", default="pytest_parallel.ini", help="Pytest config file to use")
 
     args = parser.parse_args()
 
     # Build pytest command
-    cmd = ["python", "-m", "pytest"]
+    cmd = ["python", "-m", "pytest", "-c", args.config]
     
     # Add test selection
     if args.auth:
@@ -58,13 +59,9 @@ def main():
         # Run all tests except performance tests by default
         cmd.extend(["tests/", "-m", "not slow"])
 
-    # Add parallel execution options
-    if args.parallel:
-        if args.workers > 0:
-            cmd.extend(["-n", str(args.workers)])
-        else:
-            cmd.extend(["-n", "auto"])
-        cmd.extend(["--dist=loadfile"])
+    # Add worker count if specified
+    if args.workers > 0:
+        cmd.extend(["-n", str(args.workers)])
     
     # Add options
     if args.coverage:
@@ -81,29 +78,29 @@ def main():
     if args.show_help:
         cmd.extend(["--help"])
 
-    # Set environment for isolated testing
+    # Set environment for parallel testing
     env = os.environ.copy()
     env["TESTING_MODE"] = "isolated"
-    env["DATABASE_URL"] = "sqlite:///./test_isolated.db"
+    env["DATABASE_URL"] = "sqlite:///:memory:"
     env["DEBUG"] = "True"
-    env["SECRET_KEY"] = "test-secret-key-for-isolated-testing"
+    env["SECRET_KEY"] = "test-secret-key-for-parallel-testing"
 
-    print("🚀 Starting Isolated Tests")
+    # Get CPU count for auto-detection
+    cpu_count = multiprocessing.cpu_count()
+    worker_count = args.workers if args.workers > 0 else cpu_count
+
+    print("🚀 Starting Parallel Tests")
     print("==================================================")
     print("✅ No Docker required")
     print("✅ SQLite in-memory database")
+    print("✅ Parallel execution")
+    print(f"✅ Using {worker_count} worker processes")
+    print("✅ Isolated test environment per worker")
     print("✅ Fast execution")
-    print("✅ Isolated test environment")
-    if args.parallel:
-        print("✅ Parallel execution enabled")
-        if args.workers > 0:
-            print(f"✅ Using {args.workers} worker processes")
-        else:
-            print("✅ Using auto-detected number of workers")
     print("==================================================")
 
     # Run the tests
-    success = run_command(cmd, "Running isolated tests", env)
+    success = run_command(cmd, "Running parallel tests", env)
 
     if success:
         print("\n🎉 All tests passed!")

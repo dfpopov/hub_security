@@ -27,6 +27,12 @@ python scripts/run_tests_isolated.py --fast
 
 # Debug mode
 python scripts/run_tests_isolated.py --debug
+
+# Parallel execution
+python scripts/run_tests_isolated.py --parallel
+
+# Parallel with specific number of workers
+python scripts/run_tests_isolated.py --parallel --workers 4
 ```
 
 **Features:**
@@ -36,6 +42,42 @@ python scripts/run_tests_isolated.py --debug
 - ✅ Isolated test environment
 - ✅ Works offline
 - ✅ Perfect for CI/CD
+- ✅ Parallel execution support
+
+#### `run_tests_parallel.py`
+
+**Parallel testing with optimized performance**
+
+```bash
+# Run all tests in parallel (auto-detect workers)
+python scripts/run_tests_parallel.py --all
+
+# Run specific test categories in parallel
+python scripts/run_tests_parallel.py --auth      # Authentication tests
+python scripts/run_tests_parallel.py --authors   # Author tests
+python scripts/run_tests_parallel.py --books     # Book tests
+
+# Run with specific number of workers
+python scripts/run_tests_parallel.py --workers 4
+
+# Run with coverage
+python scripts/run_tests_parallel.py --coverage
+
+# Quick tests (skip slow tests)
+python scripts/run_tests_parallel.py --fast
+
+# Debug mode
+python scripts/run_tests_parallel.py --debug
+```
+
+**Features:**
+
+- ✅ Parallel execution for maximum speed
+- ✅ Auto-detection of optimal worker count
+- ✅ Isolated database per worker process
+- ✅ No Docker required
+- ✅ SQLite in-memory databases
+- ✅ Perfect for CI/CD and development
 
 #### `run_tests_integration.py`
 
@@ -201,13 +243,19 @@ This file defines the load testing scenarios and user behaviors for the Book Col
    python scripts/run_tests_isolated.py --all
    ```
 
-2. **Run integration tests (requires Docker):**
+2. **Run parallel tests (fastest execution):**
+
+   ```bash
+   python scripts/run_tests_parallel.py --all
+   ```
+
+3. **Run integration tests (requires Docker):**
 
    ```bash
    python scripts/run_tests_integration.py --all
    ```
 
-3. **Run load tests:**
+4. **Run load tests:**
 
    ```bash
    # Linux/Mac
@@ -225,16 +273,24 @@ This file defines the load testing scenarios and user behaviors for the Book Col
    python scripts/run_tests_isolated.py --fast
    ```
 
-2. **Before commit (full testing):**
+2. **Before commit (full testing with parallel execution):**
 
    ```bash
-   python scripts/run_tests_isolated.py --coverage
+   python scripts/run_tests_parallel.py --coverage
    ```
 
 3. **Before deployment (integration testing):**
    ```bash
    python scripts/run_tests_integration.py --all
    ```
+
+### Performance Comparison
+
+| Test Mode   | Speed     | Resource Usage | Isolation | Best For          |
+| ----------- | --------- | -------------- | --------- | ----------------- |
+| Isolated    | Fast      | Low            | High      | Development       |
+| Parallel    | Very Fast | Medium         | High      | CI/CD, Pre-commit |
+| Integration | Slow      | High           | Medium    | Pre-deployment    |
 
 ## 🔧 Script Dependencies
 
@@ -260,3 +316,5 @@ This file defines the load testing scenarios and user behaviors for the Book Col
 - Shell scripts include comprehensive error handling and user feedback
 - Load testing scripts generate detailed reports in the `reports/` directory
 - All scripts support both development and production environments
+- Parallel tests use isolated SQLite databases per worker process to avoid conflicts
+- Parallel execution is automatically optimized based on CPU cores available

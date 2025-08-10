@@ -1,10 +1,15 @@
 import pytest
+import os
+import uuid
 from sqlalchemy.orm import Session
 from app.db.session import get_db_session
-from app.db.base import SessionLocal, engine, get_db
+from app.db.base import get_db
 from app.models.user import User
 from app.models.author import Author
 from app.models.book import Book
+
+# Import test configuration
+from tests.conftest import TestingSessionLocal, test_engine
 
 
 class TestDatabase:
@@ -18,7 +23,7 @@ class TestDatabase:
     
     def test_session_local(self):
         """Test SessionLocal creation."""
-        session = SessionLocal()
+        session = TestingSessionLocal()
         assert isinstance(session, Session)
         session.close()
     
@@ -26,18 +31,18 @@ class TestDatabase:
         """Test database engine connection."""
         # Test that we can connect to the database
         from sqlalchemy import text
-        with engine.connect() as connection:
+        with test_engine.connect() as connection:
             result = connection.execute(text("SELECT 1"))
             assert result.scalar() == 1
     
     def test_model_creation(self):
         """Test that models can be created."""
-        session = SessionLocal()
+        session = TestingSessionLocal()
         try:
             # Test User model
             user = User(
-                email="test@example.com",
-                username="testuser",
+                email=f"test_{uuid.uuid4().hex[:8]}@example.com",
+                username=f"testuser_{uuid.uuid4().hex[:8]}",
                 hashed_password="hashed_password"
             )
             session.add(user)

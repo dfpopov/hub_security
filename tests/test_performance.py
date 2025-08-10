@@ -1,5 +1,6 @@
 import pytest
 import time
+import uuid
 from typing import List, Dict
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
@@ -21,8 +22,8 @@ class TestPerformance:
     def performance_user(self, db_session: Session):
         """Create a user for performance tests."""
         user_data = UserCreate(
-            username="perf_user",
-            email="perf@example.com",
+            username=f"perf_user_{uuid.uuid4().hex[:8]}",
+            email=f"perf_{uuid.uuid4().hex[:8]}@example.com",
             password="testpassword123"
         )
         return create_user(db_session, user_data)
@@ -152,7 +153,7 @@ class TestPerformance:
     def test_authentication_performance(self, client: TestClient, performance_user):
         """Test performance of authentication endpoint."""
         login_data = {
-            "username": "perf_user",
+            "username": performance_user.email,
             "password": "testpassword123"
         }
         
@@ -249,8 +250,8 @@ class TestLoadTesting:
     def load_test_user(self, db_session: Session):
         """Create a user for load testing."""
         user_data = UserCreate(
-            username="loadtest_user",
-            email="loadtest@example.com",
+            username=f"loadtest_user_{uuid.uuid4().hex[:8]}",
+            email=f"loadtest_{uuid.uuid4().hex[:8]}@example.com",
             password="testpassword123"
         )
         return create_user(db_session, user_data)
@@ -321,7 +322,7 @@ class TestLoadTesting:
         for _ in range(20):
             start_time = time.time()
             response = client.post("/api/v1/auth/login", data={
-                "username": "loadtest_user",
+                "username": load_test_user.email,
                 "password": "testpassword123"
             })
             end_time = time.time()
